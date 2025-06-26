@@ -1,0 +1,59 @@
+{
+    "ComputeServers": {
+        "My_GoogleCloud_Account": {
+            "FaaSType": "GoogleCloud",
+            "Region": "us-west1",
+            "Namespace": "faasr-project",
+            "Endpoint": "https://run.googleapis.com/v2/projects/",
+            "SchedulerEndpoint": "https://cloudscheduler.googleapis.com/v1/projects/",
+            "TokenUri": "https://oauth2.googleapis.com/token",
+            "ClientEmail": "faasr-service-account@faasr-project.iam.gserviceaccount.com"
+        }
+    },
+    "DataStores": {
+        "My_Minio_Bucket": {
+            "Endpoint": "https://s3.us-east-1.amazonaws.com",
+            "Bucket": "myfaasrbucket",
+            "Region":"us-east-1",
+            "Writable": "TRUE"
+        }
+    },
+    "FunctionList": {
+        "start": {
+            "FunctionName": "create_sample_data",
+            "FaaSServer": "My_GoogleCloud_Account",
+            "Arguments": {
+                "folder": "tutorial",
+                "output1": "sample1.csv",
+                "output2": "sample2.csv"
+            },
+            "InvokeNext": "sum"
+        },
+        "sum": {
+            "FunctionName": "compute_sum",
+            "FaaSServer": "My_GoogleCloud_Account",
+            "Arguments": {
+                "folder": "tutorial",
+                "input1": "sample1.csv",
+                "input2": "sample2.csv",
+                "output": "sum.csv"
+            },
+            "InvokeNext": [
+
+            ]
+        }
+    },
+    "ActionContainers": {
+        "start": "gcr.io/faasr-project/gcloud-job-tidyverse",
+        "sum": "gcr.io/faasr-project/gcloud-job-tidyverse"
+    },
+    "FunctionGitRepo": {
+        "create_sample_data": "FaaSr/FaaSr-tutorial",
+        "compute_sum": "FaaSr/FaaSr-tutorial"
+    },
+    "FunctionInvoke": "start",
+    "InvocationID": "",
+    "FaaSrLog": "FaaSrLog",
+    "LoggingDataStore": "My_Minio_Bucket",
+    "DefaultDataStore": "My_Minio_Bucket"
+}
