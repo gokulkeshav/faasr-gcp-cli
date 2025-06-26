@@ -1,0 +1,70 @@
+name: Deploy and Manage FaaSr Workflow
+
+# This workflow is triggered manually from the Actions tab
+on:
+  workflow_dispatch:
+    inputs:
+      workflow_file:
+        description: 'Path to the workflow JSON file'
+        required: true
+        type: string
+        default: 'workflow.json'
+      action:
+        description: "Action to perform: create, trigger, or schedule"
+        required: true
+        type: choice
+        options:
+          - create
+          - trigger
+          - schedule-set
+          - schedule-unset
+        default: 'trigger'
+      cron_schedule:
+        description: 'Cron schedule (e.g., "*/10 * * * *") for schedule-set'
+        required: false
+        type: string
+        default: '*/10 * * * *'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out your repository's code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Authenticate to Google Cloud
+      # This uses the official action to securely log in and set up credentials.
+      # The Python script will find the credentials via the environment variable.
+      - name: Authenticate to Google Cloud
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      # Step 3: Set up the Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      # Step 4: Install Python dependencies
+      - name: Install Python dependencies
+        run: pip install PyJWT requests cryptography
+
+      # Step 5: Run the appropriate FaaSr command
+      - name: Run FaaSr Script
+        env:
+          S3_ACCESS_KEY: ${{ secrets.S3_ACCESS_KEY }}
+          S3_SECRET_KEY: ${{ secrets.S3_SECRET_KEY }}
+        run: |
+          # The --mode flag must come BEFORE the action (create, trigger, etc.)
+          if [[ "${{ github.event.inputs.action }}" == "create" ]]; then
+            python3 deploy_functions.py --workflow-file ${{ github.event.inputs.workflow_file }} --mode CLI create
+          elif [[ "${{ github.event.inputs.action }}" == "trigger" ]]; then
+            python3 deploy_functions.py --workflow-file ${{ github.event.inputs.workflow_file }} --mode CLI trigger
+          elif [[ "${{ github.event.inputs.action }}" == "schedule-set" ]]; then
+            python3 deploy_functions.py --workflow-file ${{ github.event.inputs.workflow_file }} --mode CLI schedule --set "${{ github.event.inputs.cron_schedule }}"
+          elif [[ "${{ github.event.inputs.action }}" == "schedule-unset" ]]; then
+            python3 deploy_functions.py --workflow-file ${{ github.event.inputs.workflow_file }} --mode CLI schedule --unset
+          fi
